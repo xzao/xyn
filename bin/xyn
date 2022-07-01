@@ -764,6 +764,7 @@ function A_EXPORT_PKG {
         R "cp -r '${XYN_PACKAGE_NFS}/cfgs/${XYN_PACKAGE_NAME}' '${temp}/${XYN_PACKAGE_NAME}/cfg'"
     fi
     R "find '${temp}' -exec touch -a -m -t ${XYN_SCRIPT_ATOMIC} {} \;"
+    R "chown -R root:root '${temp}'"
     R "tar -C '${temp}' -czf '${package_export}' '${XYN_PACKAGE_NAME}'"; s=$?
     R "rm -rf '${temp}'"
 
@@ -1421,7 +1422,6 @@ for arg in "$@"; do
                             ;;
         ingrade|sync|pull)  P_BLANK
                             A_INGRADE $@
-                            P_BLANK
                             ;;
         init)               P_ASCII
                             A_INIT $@
