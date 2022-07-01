@@ -384,7 +384,9 @@ function S_DIR_DATA {
     dirs=(
         "${root}"
         "${root}/apps"
+        "${root}/books"
         "${root}/downloads"
+        "${root}/music"
         "${root}/videos"
         "${root}/watch"
     )
