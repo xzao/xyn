@@ -1,0 +1,9 @@
+*.img
+*.log
+.cfg
+.defaults
+.pkgs
+.vagrant
+VERSION
+nfs/*
+!nfs/base

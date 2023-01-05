@@ -1,0 +1,430 @@
+#!/bin/bash
+#
+#   bin/common
+#
+[ -z "${XYN_USER_PWD}" ] && XYN_USER_PWD=$( realpath $( pwd -P )); P_PREFIX=
+
+
+#
+#   root.
+#
+[ -z "${XYN_INIT_SCRIPT_ROOT}" ] && XYN_INIT_SCRIPT_ROOT="$( cd "$(dirname "$(realpath ${BASH_SOURCE[0]} 2> /dev/null )")/.."; pwd -P )"
+if [[ "${0}" == "bash" ]]; then
+	XYN_SCRIPT_ROOT='/opt'
+elif [[ "${XYN_INIT_SCRIPT_ROOT}" == '/vagrant' ]]; then
+    XYN_SCRIPT_ROOT='/opt'
+elif [ -e "${XYN_INIT_SCRIPT_ROOT}/bin/xyn" ] && [ -e "${XYN_INIT_SCRIPT_ROOT}/bin/common" ] && [ -z "${XYN_SCRIPT_ROOT}" ]; then
+	XYN_SCRIPT_ROOT=$( realpath "${XYN_INIT_SCRIPT_ROOT}/.." )
+else
+    XYN_SCRIPT_ROOT='/opt'
+fi
+[[ "${XYN_SCRIPT_ROOT}" == '/' ]] && XYN_SCRIPT_ROOT='/opt'
+
+
+#
+#   default[s].
+#
+[ -f "${XYN_SCRIPT_XYN_ROOT}/.cfg"  ] && source "${XYN_SCRIPT_ROOT}/xyn/.cfg"
+[ -f "${XYN_SCRIPT_NFS_ROOT}/.cfg"  ] && source "${XYN_SCRIPT_ROOT}/xyn/nfs/.cfg"
+[ -f "${XYN_USER_PWD}/.cfg"         ] && source "${XYN_USER_PWD}/.cfg"
+[ -z "${XYN_SCRIPT_ATOMIC}"         ] && XYN_SCRIPT_ATOMIC='201512180130.09'
+[ -z "${XYN_SCRIPT_ROOT}"           ] && XYN_SCRIPT_ROOT='/opt'
+[ -z "${XYN_SCRIPT_XYN}"            ] && XYN_SCRIPT_XYN='xyn'
+[ -z "${XYN_SCRIPT_NFS}"            ] && XYN_SCRIPT_NFS='nfs'
+[ -z "${XYN_SCRIPT_NFS_IGNORE}"     ] && XYN_SCRIPT_NFS_IGNORE=(nfs)
+[ -z "${XYN_SCRIPT_XYN_ROOT}"       ] && XYN_SCRIPT_XYN_ROOT="${XYN_SCRIPT_ROOT}/${XYN_SCRIPT_XYN}"
+[ -z "${XYN_SCRIPT_NFS_ROOT}"       ] && XYN_SCRIPT_NFS_ROOT="${XYN_SCRIPT_ROOT}/${XYN_SCRIPT_XYN}/${XYN_SCRIPT_NFS}"
+[ -z "${XYN_DATA_ROOT}"             ] && XYN_DATA_ROOT="/data"
+[ -z "${XYN_DATA_PUID}"             ] && XYN_DATA_PUID="7420"
+[ -z "${XYN_DATA_GUID}"             ] && XYN_DATA_GUID="7420"
+[ -z "${XYN_DOCKER_NETWORK}"        ] && XYN_DOCKER_NETWORK='xyn'
+[ -z "${XYN_SCRIPT_MAINTAINER}"     ] && XYN_SCRIPT_MAINTAINER="${XYN_SCRIPT_XYN}"
+[ -z "${XYN_SCRIPT_REMOTE}"         ] && XYN_SCRIPT_REMOTE='origin'
+[ -z "${XYN_SCRIPT_HOST}"           ] && XYN_SCRIPT_HOST='git'
+[ -z "${XYN_SCRIPT_XYN_BRANCH}"     ] && XYN_SCRIPT_XYN_BRANCH="stable"
+[ -z "${XYN_SCRIPT_XYN_REMOTE}"     ] && XYN_SCRIPT_XYN_REMOTE="${XYN_SCRIPT_REMOTE}"
+[ -z "${XYN_SCRIPT_XYN_REMOTE_URL}" ] && XYN_SCRIPT_XYN_REMOTE_URL="https://${XYN_SCRIPT_HOST}/${XYN_SCRIPT_MAINTAINER}/${XYN_SCRIPT_XYN}.git"
+[ -z "${XYN_SCRIPT_XYN_REMOTE_URL}" ] && XYN_SCRIPT_XYN_REMOTE_URL="https://${XYN_SCRIPT_HOST}/${XYN_SCRIPT_MAINTAINER}/${XYN_SCRIPT_XYN}.git"
+[ -z "${XYN_SCRIPT_COMMON}"         ] && XYN_SCRIPT_COMMON="${XYN_SCRIPT_XYN_ROOT}/bin/common"
+[ -z "${XYN_SCRIPT_QUIET}"          ] && XYN_SCRIPT_QUIET=0   # TRUE[1], FALSE[0]
+[ -z "${XYN_SCRIPT_SYNC}"           ] && XYN_SCRIPT_SYNC=1    # TRUE[1], FALSE[0]
+[ -z "${XYN_SYSTEM_HOSTNAME}"       ] && XYN_SYSTEM_HOSTNAME="${XYN_SCRIPT_XYN}"
+[ -z "${XYN_SYSTEM_TZ}"             ] && XYN_SYSTEM_TZ="${XYN_SCRIPT_XYN}"
+[ -z "${XYN_SCRIPT_UNATTENDED}"     ] && XYN_SCRIPT_UNATTENDED=0 # TRUE[1], FALSE[0]
+[ -z "${XYN_SCRIPT_UPGRADE}"        ] && XYN_SCRIPT_UPGRADE=0    # TRUE[1], FALSE[0]
+[ -z "${XYN_SCRIPT_UPGRADE}"        ] && XYN_SCRIPT_UPGRADE=0    # TRUE[1], FALSE[0]
+[ -z "${XYN_SCRIPT_UPGRADE_IGNORE}" ] && XYN_SCRIPT_UPGRADE_IGNORE=("sys.openvpn" "sys.updater" "sys.upgrader")
+[ -z "${XYN_SCRIPT_VERBOSE}"        ] && XYN_SCRIPT_VERBOSE=0    # TRUE[1], FALSE[0]
+[ -f "${XYN_SCRIPT_NFS_ROOT}/.cfg"  ] && source "${XYN_SCRIPT_NFS_ROOT}/.cfg"
+[ -f "${XYN_SCRIPT_ROOT}/.cfg"      ] && source "${XYN_SCRIPT_ROOT}/.cfg"
+[ -f "${XYN_USER_PWD}/.cfg"         ] && source "${XYN_USER_PWD}/.cfg"
+
+
+#
+#   base.
+#   
+XYN_SCRIPT_XYN_ROOT="${XYN_SCRIPT_ROOT}/${XYN_SCRIPT_XYN}"
+XYN_SCRIPT_NFS_ROOT="${XYN_SCRIPT_ROOT}/${XYN_SCRIPT_XYN}/${XYN_SCRIPT_NFS}"
+
+
+#
+#   color[s].
+#
+C_BLUE='\033[0;34m'
+C_GREEN='\033[0;32m'
+C_NC='\033[0m'
+C_RED='\033[0;31m'
+C_YELLOW='\033[0;33m'
+
+
+#
+#   exist[s].
+#
+function E {
+    R "test -e $1" $2; return $?
+}
+
+function E_COMMAND {
+    R "command -v '${1}'"; return $?
+}
+
+function E_DIR {
+    R "test -d $1" $2; return $?
+}
+
+function E_FILE {
+    R "test -f $1" $2; return $?
+}
+
+function E_LINK {
+    R "test -L $1" $2; return $?
+}
+
+function E_VAR {
+    test -z "$1" && return 1 || return 0
+}
+
+
+#
+#   function[s].
+#
+function F_BUILD {
+    R "docker build --pull -t '${XYN_IMAGE}' ."
+    return $?
+}
+
+function F_EXIT {
+    [ $# -eq 0 ] && s=0 || s="${1}"
+    exit $s
+}
+
+function F_RUNNING {
+    if R "docker ps -a | grep -q '${XYN_NAME}'"; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+function F_RM {
+    R "docker rm '${XYN_NAME}'"
+    return $?
+}
+
+function F_START {
+    R "docker run -d \
+    --name=${XYN_NAME} \
+    --network=host \
+    --restart unless-stopped \
+    ${XYN_IMAGE}"
+    return $?
+}
+
+function F_STOP {
+    R "docker stop '${XYN_NAME}'"
+    return $?
+}
+
+function F_STOPPED {
+    R "docker ps -a | grep '${XYN_NAME}' | grep -q 'Created'" && return 0
+    R "docker ps -a | grep '${XYN_NAME}' | grep -q 'Exited'"  && return 0
+    return 1
+}
+
+
+#
+#   ownership.
+#
+function O {
+    [ $# -ge 1 ] && directory="$1" || directory='.'
+    [ $# -ge 2 ] && user="$2"      || user="${USER}"
+    [ $# -ge 3 ] && pfiles="$3"    || pfiles='644'
+    [ $# -gt 4 ] && pdirs="$4"     || pdirs='755'
+    if [ ! -z "$user" ]; then
+        if ! echo "$user" | grep -q ':'; then
+            user="${user}:${user}"
+        fi
+    fi
+    E_DIR "'${directory}'" || return $?
+    R "chown -R '${user}' '${directory}'"
+    R "chmod g+s          '${directory}'"
+    R "find '${directory}' -type f -exec chmod ${pfiles} {} \;"
+    R "find '${directory}' -type d -exec chmod ${pdirs}  {} \;"
+}
+
+function O_BIN {
+    [ ! -d "$1" ] && return 1
+    R "find '${1}' | grep '/bin/' | xargs -n 1 chmod +x"
+}
+
+function O_DATA {
+    R "id 'data'" && O "${1}" 'data' || O "${1}" 'root'
+}
+
+function O_GIT {
+    if [ -d "${1}/.git" ]; then
+        R "find '${1}/.git/hooks' -type f -exec chmod +x {} \;"
+    fi
+}
+
+function O_NFS {
+    O "${1}" 'data'; return $?
+}
+
+function O_ROOT {
+    O "${1}" 'root'; return $?
+}
+
+function O_USER {
+    O "${1}"; return $?
+}
+
+
+#
+#   print[s].
+#
+function P_ASCII {
+    [ ${XYN_SCRIPT_QUIET} -eq 1 ] && return 0
+    cat "${XYN_SCRIPT_XYN_ROOT}/.ascii"
+}
+
+function P_BLANK {
+    [ ${XYN_SCRIPT_QUIET} -eq 1 ] && return 0
+    echo
+}
+
+function P_COMMAND {
+    [ ${XYN_SCRIPT_QUIET} -eq 1 ] && return 0
+    echo "${P_PREFIX}| $1" | sed 's/  */ /g'
+}
+
+function P_CONFIRM {
+    [ ${XYN_SCRIPT_QUIET} -eq 1 ] && return 0
+    message="$1"
+    [ -z "${message}" ] && message='Press any key to confirm or ctrl + c to cancel'
+    P_COMMAND
+    read -p "${P_PREFIX}| ${message} [y|n]: " -n 1 -r
+    echo ""
+    P_COMMAND
+    if [[ ! $REPLY =~ ^[Yy]$ ]]
+    then
+        return 1
+    fi
+}
+
+function P_HELP {
+    [ ${XYN_SCRIPT_QUIET} -eq 1 ] && return 0
+    cat << EndOfMessage
+Usage: xyn [OPTION]...
+
+Mandatory arguments to long options are mandatory for short options too.
+  help              displays this help dialog
+
+Exit status:
+   0  OK
+ > 0  Usage errors (e.g., incorrect argument, help, etc)
+EndOfMessage
+    exit 0
+}
+
+function P_MESSAGE {
+    [ ${XYN_SCRIPT_QUIET} -eq 1 ] && return 0
+    message="$1"
+    quit="$3"
+    if [ $# -eq 1 ]; then
+        C_CO="${C_BLUE}-"
+    elif [ $2 -eq 0 ]; then
+        C_CO="${C_BLUE}-"
+    elif [ $2 -eq 1 ]; then
+        C_CO="${C_GREEN}x"
+    elif [ $2 -eq 2 ]; then
+        C_CO="${C_RED}!"
+    elif [ $2 -eq 3 ]; then
+        C_CO="${C_YELLOW}-"
+    else
+        return 1
+    fi
+    printf "${P_PREFIX}[${C_CO}${C_NC}] ${message}\n"
+    if [ ! -z $quit ]; then
+        P_BLANK
+        P_PREFIX
+        exit $quit
+    fi
+}
+
+function P_PREFIX {
+    [ ${XYN_SCRIPT_QUIET} -eq 1 ] && return 0
+    if [ $# -gt 0 ]; then
+        P_PREFIX=$( echo "${1}" | sed 's,.tar.gz,,g' )
+        P_PREFIX_DOT=$( echo -n ${P_PREFIX//[^.]} | wc -c )
+        if [ "${P_PREFIX_DOT}" -gt 1 ]; then
+            P_PREFIX="[$( echo $P_PREFIX | cut -d'.' -f 2-3 ) "
+        fi
+    else
+        P_PREFIX=
+    fi
+}
+
+function P_STDERR {
+    echo "$SCRIPT: $1" 1>&2
+    exit $2
+}
+
+function P_STDOUT {
+    [ ${XYN_SCRIPT_QUIET} -eq 1 ] && return 0
+    echo "$1"
+}
+
+function P_USAGE {
+    echo "${XYN_SCRIPT_XYN}: unrecognized option '$@'"
+    echo "Try '${XYN_SCRIPT_XYN} help' for more information"
+    exit 1
+}
+
+
+#
+#   quote[s].
+#
+function Q_RAND {
+
+    # quotes check.
+    [ ! -e "${XYN_SCRIPT_XYN_ROOT}/.quotes" ] && return 1
+
+    # quotes.
+    readarray -t quotes < "${XYN_SCRIPT_XYN_ROOT}/.quotes"
+
+    # quote random set..
+    quotes_key=$[$RANDOM % ${#quotes[@]}]
+    QUOTE=$( echo ${quotes[$quotes_key]} )
+
+}
+
+
+#
+#   run.
+#
+function R {
+
+    # run command.
+    command="$1"
+
+    # run command [print].
+    if [ "${XYN_SCRIPT_QUIET}" -eq 0 ]; then
+        [ $# -gt 1 ] && P_COMMAND
+        P_COMMAND "$command"
+        [ $# -gt 1 ] && P_COMMAND
+    fi
+
+    # run command [run].
+    if [ "${XYN_SCRIPT_VERBOSE}" -eq 1 ]; then
+        bash -c "$command"; s=$?
+    else
+        bash -c "$command" > /dev/null 2>&1; s=$?
+    fi
+    
+    # return,
+    return $s
+
+}
+
+
+#
+#   sys.
+#
+function S_DIR_DATA {
+    [ ! -z "${1}" ] && root="${1}" || root="${XYN_DATA_ROOT}"
+    dirs=(
+        "${root}"
+        "${root}/apps"
+        "${root}/books"
+        "${root}/downloads"
+        "${root}/music"
+        "${root}/videos"
+        "${root}/watch"
+    )
+    for dir in "${dirs[@]}"; do
+        if [ ! -e "'${dir}'" ]; then
+            R "mkdir -p '${dir}'" || exit $?
+        fi
+    done
+    O_DATA "${root}"
+}
+
+function S_DIR_XYN {
+    [ ! -z "${1}" ] && root="${1}" || root="${XYN_SCRIPT_XYN_ROOT}"
+    O_ROOT "${root}"
+    O_BIN  "${root}"
+    O_GIT  "${root}"
+}
+
+function S_DIR_NFS {
+    if [ ! -z "${1}" ]; then
+        S_DIR_NFS_REPO "${1}"
+        return $?
+    fi
+    for repo in `find "${XYN_SCRIPT_NFS_ROOT}" -maxdepth 1 -type d`; do
+        repo_name=$( basename "${repo}" )
+        if [[ ! " ${XYN_SCRIPT_NFS_IGNORE[*]} " =~ " ${repo_name} " ]]; then
+            S_DIR_NFS_REPO "${repo}"
+        fi
+    done
+}
+
+function S_DIR_NFS_REPO {
+    root="${1}"; [ -d "${root}" ] || return 1
+    dirs=(
+        "${root}"
+        "${root}/cfgs"
+        "${root}/pkgs"
+        "${root}/pkgs/available"
+        "${root}/pkgs/disabled"
+        "${root}/pkgs/enabled"
+    )
+    for dir in "${dirs[@]}"; do
+        if [ ! -e "'${dir}'" ]; then
+            R "mkdir -p '${dir}'" || exit $?
+        fi
+    done
+    O_ROOT "${root}"
+    O_BIN  "${root}"
+    O_GIT  "${root}"
+    O_DATA "${root}/cfgs"
+}
+
+
+function S_ROOT {
+    if [ $UID -ne 0 ]; then
+        P_ASCII
+        P_MESSAGE "Insufficient Privileges" 2 1
+    fi
+}
+
+
+#
+#   var[s].
+#
+function V_OS {
+    if [ -e '/etc/os-release' ]; then
+        source '/etc/os-release'
+    fi
+}

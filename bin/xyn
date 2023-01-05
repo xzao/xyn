@@ -1,0 +1,1453 @@
+#!/bin/bash
+#
+#   bin/xyn
+#
+[ -z "${XYN_INIT_SCRIPT_COMMON}" ] && XYN_INIT_SCRIPT_COMMON='https://raw.githubusercontent.com/eyit/xyn/master/bin/common'
+[ -z "${XYN_INIT_SCRIPT_ROOT}"   ] && XYN_INIT_SCRIPT_ROOT="$( cd "$(dirname "$(realpath ${BASH_SOURCE[0]} 2> /dev/null )")/.."; pwd -P )"
+[ -z "${XYN_USER_PWD}" ] && XYN_USER_PWD=$( realpath $( pwd -P ))
+
+
+#
+#   common.
+#
+[ -f "${XYN_INIT_SCRIPT_ROOT}/bin/common" ] && source "${XYN_INIT_SCRIPT_ROOT}/bin/common"
+[[   "${0}" == 'bash' ]]                    && source <( curl -sL "${XYN_INIT_SCRIPT_COMMON}" )
+[ -z "${XYN_SCRIPT_XYN_ROOT}" ]             && exit 1
+
+
+#
+#   branch.
+#
+if [[ "${0}" == 'bash' ]]; then
+    if [ ! -z "${1}" ]; then
+        case "${1}" in
+            master) branch='master'
+                    ;;
+            edge)   branch='edge'
+                    ;;
+            stable) branch='stable'
+                    ;;
+            *)      branch='stable'
+                    ;;
+        esac
+        XYN_SCRIPT_XYN_BRANCH="${branch}"
+        XYN_SCRIPT_NFS_BRANCH="${branch}"
+    fi
+fi
+
+
+#
+#   action[s].
+#
+function A_BACKUP {
+
+
+    echo ""
+    echo "  TODO: A_BACKUP"
+    echo ""
+    exit
+
+
+}
+
+function A_CFG {
+
+    # conf var.
+    package_name="$1"
+    package_command="$2"
+    package="${XYN_PACKAGE_NFS}/pkgs/enabled/${package_name}"
+
+    # conf.
+    P_MESSAGE "Configure[ing] package [${package_name}]"
+
+    # conf [cfg].
+    if [ -d "${XYN_PACKAGE_NFS}/pkgs/enabled/${package_name}/cfg" ]; then
+        if [ ! -d "${XYN_PACKAGE_NFS}/cfgs/${package_name}" ]; then
+
+            # conf [cfg] skel.
+            P_COMMAND
+            E_DIR "${XYN_PACKAGE_NFS}/pkgs/enabled/${package_name}/cfg"
+            E_DIR "${XYN_PACKAGE_NFS}/cfgs/${package_name}"
+            R "cp -r '${XYN_PACKAGE_NFS}/pkgs/enabled/${package_name}/cfg' '${XYN_PACKAGE_NFS}/cfgs/${package_name}'"
+            if echo "${package_name}" | grep -q 'app'; then
+                O_DATA "${XYN_PACKAGE_NFS}/cfgs/${package_name}"
+            else
+                O_DATA "${XYN_PACKAGE_NFS}/cfgs/${package_name}"
+            fi
+            P_COMMAND
+            P_MESSAGE "Configure[ed] package [${package_name}]" 1
+
+        fi
+    fi
+
+}
+
+function A_CLONE {
+
+    # package.
+    P_BLANK
+    A_PACKAGE "${1}" 'available' || return $?
+    P_BLANK
+
+    # clone package.
+    P_MESSAGE "Clone[ing] package [${XYN_PACKAGE_NAME_BASE}]"
+
+    # clone package arg[s].
+    [ $# -lt 2 ] && P_MESSAGE "Clone package fail[ed]: insufficient arg[s]" 2 1
+
+    # clone package clone.
+    package_clone_name_base="${2}"
+    package_clone_name="${XYN_SCRIPT_XYN}.${XYN_PACKAGE_TYPE}.${2}"
+    package_clone="${XYN_PACKAGE_NFS}/pkgs/available/${package_clone_name}.tar.gz"
+
+    # clone.
+    P_COMMAND
+    P_COMMAND "mktemp -d"; temp=$( mktemp -d )
+    R "tar -kxzf '${XYN_PACKAGE}' --directory '${temp}'"
+    R "ls '${temp}' | head -1"; p_dir=$( ls "${temp}" | head -1 )
+    R "mv '${temp}/${p_dir}' '${temp}/${XYN_PACKAGE_TYPE}.${2}'"
+    R "tar -C '${temp}' -czf '${package_clone}' '${XYN_PACKAGE_TYPE}.${2}'" 
+    R "rm -rf '${temp}'"
+    P_COMMAND
+
+    #clone[d].
+    [   -f "${package_clone}" ] && P_MESSAGE "Clone[ed] package [${package_clone_name_base}]" 1
+    [ ! -f "${package_clone}" ] && P_MESSAGE "Clone[ed] package [${package_clone_name_base}]" 2   
+    P_BLANK
+
+}
+
+function A_CONFIGURE {
+
+
+    echo ""
+    echo "  TODO: A_CONFIGURE"
+    echo ""
+    exit
+
+
+    # configure var.
+    d_lines=10
+    d_chars=70
+    d_pad="\n\n\n "
+    d_delay=0.2
+    i_xyn=0 # TRUE[1], FALSE[0]
+    i_nfs=0 # TRUE[1], FALSE[0]
+
+    # configure unattended.
+    XYN_SCRIPT_UNATTENDED=1
+
+    # configure quote.
+    Q_RAND
+    if ! dialog --backtitle "${XYN_SCRIPT_XYN^^} :: CONFIGURE" --title "${XYN_SCRIPT_XYN^^}" --msgbox "\n\n${QUOTE}" 12 $d_chars; then
+        clear && exit 1
+    fi
+
+    # configure ingrade.
+    d_title="${XYN_SCRIPT_XYN^^} :: CONFIGURE :: INGRADE"
+    if ! dialog --backtitle "${d_title}" --yesno "${d_pad}Ingrade [${XYN_SCRIPT_XYN}] [${XYN_SCRIPT_NFS}]?" $d_lines $d_chars; then
+        clear && exit 1
+    fi
+
+    # configure ingrade.
+    d_title="${XYN_SCRIPT_XYN^^} :: CONFIGURE :: INGRADE :: ${XYN_SCRIPT_XYN^^}"
+
+    # configure ingrade [xyn] repository.
+    if ! XYN_SCRIPT_XYN_REMOTE_URL=$( dialog --backtitle "${d_title}" --inputbox "\nEnter [${XYN_SCRIPT_XYN}] repository remote:" $d_lines $d_chars "${XYN_SCRIPT_XYN_REMOTE_URL}" 3>&1 1>&2 2>&3 3>&- ); then
+        dialog --backtitle "${d_title}" --msgbox  "${d_pad}Ingrade [${XYN_SCRIPT_XYN^^}] cancel[ed]." $d_lines $d_chars && clear && exit 1
+    fi
+
+    # configure ingrade [xyn] branch.
+    if ! XYN_SCRIPT_XYN_BRANCH=$( dialog --backtitle "${d_title}" --inputbox "\nEnter [${XYN_SCRIPT_XYN}] repository branch:" $d_lines $d_chars "${XYN_SCRIPT_XYN_BRANCH}" 3>&1 1>&2 2>&3 3>&- ); then
+        dialog --backtitle "${d_title}" --msgbox  "${d_pad}Ingrade [${XYN_SCRIPT_XYN^^}] cancel[ed]." $d_lines $d_chars && clear && exit 1
+    fi
+
+    # configure ingrade.
+    d_title="${XYN_SCRIPT_XYN^^} :: CONFIGURE :: INGRADE :: ${XYN_SCRIPT_NFS^^}"
+
+    # configure ingrade [nfs] repository.
+    if ! XYN_SCRIPT_NFS_REMOTE_URL=$( dialog --backtitle "${d_title}" --inputbox "\nEnter [${XYN_SCRIPT_NFS}] repository remote:" $d_lines $d_chars "${XYN_SCRIPT_NFS_REMOTE_URL}" 3>&1 1>&2 2>&3 3>&- ); then
+        dialog --backtitle "${d_title}" --msgbox  "${d_pad}Ingrade [${XYN_SCRIPT_NFS}] cancel[ed]." $d_lines $d_chars && clear && exit 1
+    fi
+
+    # configure ingrade [nfs] branch.
+    if ! XYN_SCRIPT_NFS_BRANCH=$( dialog --backtitle "${d_title}" --inputbox "\nEnter [${XYN_SCRIPT_NFS}] repository branch:" $d_lines $d_chars "${XYN_SCRIPT_NFS_BRANCH}" 3>&1 1>&2 2>&3 3>&- ); then
+        dialog --backtitle "${d_title}" --msgbox  "${d_pad}Ingrade [${XYN_SCRIPT_NFS}] cancel[ed]." $d_lines $d_chars && clear && exit 1
+    fi
+
+    # configure ingrade.
+    clear
+    P_ASCII
+    P_PREFIX
+    A_INGRADE && s=$?
+
+    # configure ingrade continue.
+    echo; read -s -p " Press [enter] to continue ... "; echo; echo
+    [ $s -ne 0 ] && exit $s
+
+    # configure import.
+    d_title="${XYN_SCRIPT_XYN^^} :: CONFIGURE :: INGRADE :: IMPORT"
+    if dialog --backtitle "${d_title}" --yesno "${d_pad}Import [${XYN_SCRIPT_XYN}] [${XYN_SCRIPT_NFS}]?" $d_lines $d_chars; then    
+        echo; echo
+        P_ASCII
+        A_IMPORT
+        echo; read -s -p " Press [enter] to continue ... "; echo; echo
+    fi
+
+    # configure configuration files [cfgs].
+    if [ -d "${XYN_USER_PWD}/cfgs" ]; then
+        d_title="${XYN_SCRIPT_XYN^^} :: CONFIGURE :: CFG"
+        dialog --backtitle "${d_title}" --infobox "${d_pad}Import[ing] cfg[s] ..."  $d_lines $d_chars; cp -a "${PWDU}/cfgs/." "${XYN_SCRIPT_NFS_ROOT}/var/cfgs/" && sleep $d_delay
+    fi
+
+    # configure packages available.
+    configure_packages_available=( )
+    configure_packages_available_index=1
+    for pkg in $( ls "${XYN_SCRIPT_NFS_ROOT}/var/pkgs/available" | sed 's,.tar.gz,,g' ); do
+        enabled="off"
+        if [ -f "${XYN_SCRIPT_NFS_ROOT}/.defaults" ]; then
+            grep -q "${pkg}" "${XYN_SCRIPT_NFS_ROOT}/.defaults" && enabled="on"
+        fi
+        configure_packages_available+=( "${configure_packages_available_index}" "${pkg}" "${enabled}" )
+        configure_packages_available_index=$( expr "${configure_packages_available_index}" + 1 )
+    done
+
+    # configure packages available select.
+    d_title="${XYN_SCRIPT_XYN^^} :: CONFIGURE :: PACKAGES"
+    configure_packages_available_selections=$( dialog --backtitle "${d_title}" --title "PACKAGE SELECTION" --checklist "" 24 40 20 "${configure_packages_available[@]}" 3>&1 1>&2 2>&3 3>&- )
+
+    # configure packages available selected.
+    if [ ! -z "${configure_packages_available_selections}" ]; then
+
+        # configure packages confirm enable.
+        if dialog --backtitle "${d_title}" --yesno "${d_pad}Enable package[s]?" $d_lines $d_chars; then
+
+            # configure packages enable packages.
+            dialog --backtitle "${d_title}" --infobox "${d_pad}Enabling packages ..." $d_lines $d_chars; sleep $d_delay
+            configure_packages_available_index=1
+            for pkg in $( ls "${XYN_SCRIPT_NFS_ROOT}/var/pkgs/available" ); do
+                if [[ " ${configure_packages_available_selections[*]} " =~ " ${configure_packages_available_index} " ]]; then
+                    dialog --backtitle "${d_title}" --infobox "${d_pad}Enabling package [${pkg}] ..." $d_lines $d_chars
+                    A_ENABLE_PKG ${pkg} > /dev/null 2>& 1 || dialog --backtitle "${d_title}" --msgbox  "${d_pad}Package [${pkg}] enable failed [${?}]." $d_lines $d_chars; sleep $d_delay
+                    P_COMMAND
+                fi
+                configure_packages_available_index=$( expr "${configure_packages_available_index}" + 1 )
+            done
+
+        else
+            dialog --backtitle "${d_title}" --msgbox "${d_pad}Enable cancel[ed]." $d_lines $d_chars
+            exit 1
+        fi
+
+        # configure packages confirm up.
+        if dialog --backtitle "${d_title}" --yesno "${d_pad}Up packages?" $d_lines $d_chars; then
+            echo; echo
+
+            # configure packages
+            P_ASCII
+            P_PREFIX
+
+            # configure packages available up [sys].
+            configure_packages_available_index=1
+            for pkg in $( ls "${XYN_SCRIPT_NFS_ROOT}/var/pkgs/available" | cut -d'.' -f 2-3 ); do
+                if echo "${pkg}" | grep -q 'sys'; then
+                    if [[ " ${configure_packages_available_selections[*]} " =~ " ${configure_packages_available_index} " ]]; then
+                        A_UP_PKG ${pkg}
+                        P_BLANK
+                    fi
+                fi
+                configure_packages_available_index=$( expr "${configure_packages_available_index}" + 1 )
+            done
+
+            # configure packages available up [not sys].
+            configure_packages_available_index=1
+            for pkg in $( ls "${XYN_SCRIPT_NFS_ROOT}/var/pkgs/available" | cut -d'.' -f 2-3 ); do
+                if echo "${pkg}" | grep -v -q 'sys'; then
+                    if [[ " ${configure_packages_available_selections[*]} " =~ " ${configure_packages_available_index} " ]]; then
+                        A_UP_PKG ${pkg}
+                        P_BLANK
+                    fi
+                fi
+                configure_packages_available_index=$( expr "${configure_packages_available_index}" + 1 )
+            done
+
+            # configure packages.
+            P_MESSAGE "Up[ed] packages"
+            P_PREFIX
+
+            # configure packages continue.
+            echo; read -s -p " Press [enter] to continue ... "; echo; echo
+
+        else
+            dialog --backtitle "${d_title}" --msgbox "${d_pad}Up cancel[ed]." $d_lines $d_chars
+            exit 1
+        fi
+
+    fi
+
+    # configure complete.
+    d_title="${XYN_SCRIPT_XYN^^} :: CONFIGURE :: COMPLETE"
+    dialog --backtitle "${d_title}" --msgbox  "${d_pad}Fin[ish]." $d_lines $d_chars
+
+    # configure reboot.
+    if dialog --backtitle "${XYN_SCRIPT_XYN^^} :: REBOOT" --yesno "${d_pad} Reboot system?" $d_lines $d_chars; then
+        ( sleep 10 ; reboot ) &
+        dialog --backtitle "${d_title}" --msgbox  "${d_pad}System rebooting in [10] seconds...\n\n Press any key to reboot now." 12 $d_chars
+        reboot
+    fi
+
+    # configure clear.
+    [ "${XYN_SCRIPT_VERBOSE}" -eq 0 ] && clear
+
+}
+
+function A_DELETE {
+
+    # delete [package].
+    if [ $# -gt 0 ]; then
+        A_DELETE_PKG $@; s=$?
+        P_BLANK
+        return $s
+    fi
+
+    # delete package[s] count enabled.
+    package_count_enabled=$( find "${XYN_SCRIPT_NFS_ROOT}" -maxdepth 4 -type d | grep 'enabled/' | wc -l  )
+
+    # delete package[s].
+    P_MESSAGE "Delete[ing] package[s] [${package_count_enabled}]"
+    [ "${package_count_enabled}" -eq 0 ] && P_MESSAGE "Delete[ed]  package[s] [${package_count_enabled}]" 3 1
+    for package_name_enabled in $( find "${XYN_SCRIPT_NFS_ROOT}" -maxdepth 4 -type d | grep 'enabled/' | xargs -n 1 basename ); do
+        P_MESSAGE "- ${package_name_enabled}" 0
+    done
+    if ! P_CONFIRM "Delete package[s]?"; then
+        P_MESSAGE "Delete package[s] aborted" 2
+        P_BLANK
+        F_EXIT 1
+    fi
+    P_MESSAGE "Delete[ing] package[s]"
+    P_BLANK
+
+    # delete package[s] delete package.
+    for package_name in $( find "${XYN_SCRIPT_NFS_ROOT}" -maxdepth 4 -type d | grep 'enabled/' | xargs -n 1 basename ); do
+        A_DELETE_PKG "${package_name}"
+        P_BLANK        
+    done
+
+    # delete package[s] count enabled.
+    package_count_deleted=$( expr "${package_count_enabled}" - "$( find "${XYN_SCRIPT_NFS_ROOT}" -maxdepth 4 -type d | grep 'enabled/' | wc -l  )" )
+
+    # enable package[s] check.
+    P_MESSAGE "Delete[d] package[s] [${package_count_deleted}]"
+    P_BLANK
+
+}
+
+function A_DELETE_PKG {
+
+    # package.
+    A_PACKAGE "${1}" 'enabled' || return $?
+    P_BLANK
+
+    # delete package prefix.
+    P_PREFIX "[${XYN_PACKAGE_NAME}] "
+
+    # delete package hook [bin/down].
+    A_HOOK "${XYN_PACKAGE_NAME}" "down"
+
+    # delete package conf [etc]
+    A_ETC "${XYN_PACKAGE_NAME}" "unlink"
+
+    # delete package.
+    P_MESSAGE "Deleting [${XYN_PACKAGE_NAME}]"
+    P_COMMAND; cd "${XYN_SCRIPT_XYN_ROOT}"
+    R "rm -rf '${XYN_PACKAGE_NFS}/pkgs/enabled/${XYN_PACKAGE_NAME}'"; s=$?
+
+    # delete package delete[ed].
+    if [ $s -eq 0 ]; then
+        P_COMMAND
+        P_MESSAGE "Package delete[ed]" 1
+
+    # delete package error.
+    else
+        P_COMMAND
+        P_MESSAGE "Package delete fail[ed] [${s}]" 2
+
+    fi
+
+    # dekete package prefix.
+    P_PREFIX
+
+    # return.
+    return $s
+
+}
+
+function A_DISABLE {
+
+    # disable package.
+    if [ $# -gt 0 ]; then
+        A_DISABLE_PKG $@; s=$?
+        P_BLANK
+        return $s
+    fi
+
+
+    #
+    #   TODO:   A_DISABLE :: ALL
+    #
+    return 1
+
+
+}
+
+function A_DISABLE_PKG {
+
+    # package.
+    A_PACKAGE "${1}" 'enabled' || return $?
+    P_BLANK
+
+    # package export.
+    package_export="${XYN_PACKAGE_NFS}/pkgs/disabled/${XYN_PACKAGE_NAME}.tar.gz"
+    
+    # package name base.
+    package_name_base=$( echo "${XYN_PACKAGE_NAME}" | cut -d '.' -f2-3 )
+
+    # disable package prefix.
+    P_PREFIX "[${XYN_PACKAGE_NAME}] "
+
+    # disable package.
+    P_MESSAGE "Disabling package [${XYN_PACKAGE_NAME}]"
+
+    # disable package exists stopping.
+    if [ -f "${XYN_PACKAGE_NFS}/pkgs/disabled/${package_name_base}" ]; then
+        P_COMMAND
+        P_MESSAGE "Disabled package already [skipping]" 2
+        return 1
+    fi
+
+    # disable package compress.
+    P_MESSAGE "Compressing [${XYN_PACKAGE_NAME}]"
+    P_COMMAND
+    R "tar -C '${XYN_PACKAGE_NFS}/pkgs/enabled' -czf '${package_export}' '${XYN_PACKAGE_NAME}'"; s=$?
+
+    # disable package disabled.
+    if [ "${s}" -eq 0 ]; then
+        R "sed -i '/${XYN_PACKAGE_NAME}/d' '.pkgs'"
+        R "rm -r '${XYN_PACKAGE_NFS}/pkgs/enabled/${XYN_PACKAGE_NAME}'"
+        P_COMMAND
+        P_MESSAGE "Package disabled" 1
+
+    # disable package error.
+    else
+        P_COMMAND
+        P_MESSAGE "Error [$s]" 2
+    fi
+
+    # disable package prefix.
+    P_PREFIX
+
+    # return.
+    return $s
+
+}
+
+function A_DOWN {
+
+    # down package.
+    if [ $# -gt 0 ]; then
+        A_DOWN_PKG $@
+        P_BLANK
+        return $?
+    fi
+
+    # down package[s] count enabled.
+    package_count_enabled=$( find "${XYN_SCRIPT_NFS_ROOT}" -maxdepth 4 -type d | grep 'enabled/' | wc -l  )
+
+    # down package[s] list enaabled.
+    P_MESSAGE "Down[ing] package[s] [${package_count_enabled}]"
+    [ "${package_count_enabled}" -eq 0 ] && P_MESSAGE "Down[ed]  package[s] [${package_count_enabled}]" 3 1
+    for package_name_enabled in $( find "${XYN_SCRIPT_NFS_ROOT}" -maxdepth 4 -type d | grep 'enabled/' | xargs -n 1 basename ); do
+        P_MESSAGE "- ${package_name_enabled}" 0
+    done
+    if ! P_CONFIRM "Down package[s]?"; then
+        P_MESSAGE "Down package[s] aborted" 2
+        P_BLANK
+        F_EXIT 1
+    fi
+    P_MESSAGE "Down[ing] package[s]"
+    P_BLANK
+
+    # down package[s].
+    for package_name in $( find "${XYN_SCRIPT_NFS_ROOT}" -maxdepth 4 -type d | grep 'enabled/' | xargs -n 1 basename ); do
+        A_DOWN_PKG "${package_name}"
+        P_BLANK        
+    done
+
+    #
+    #   TODO: CHECK A_PACKAGE_HEALTH DOWN
+    #
+
+}
+
+function A_DOWN_PKG {
+
+    # package.
+    A_PACKAGE "${1}" || return $?
+    P_BLANK
+
+    # down package prefix.
+    P_PREFIX "[${XYN_PACKAGE_NAME}] "
+
+    # down package start.
+    P_MESSAGE "Down package [${XYN_PACKAGE_NAME}]"
+
+    # down package hook [bin/down].
+    A_HOOK "${XYN_PACKAGE_NAME}" "down"; s=$?
+
+    # down[ed].
+    if [ $s -eq 0 ]; then
+        P_MESSAGE "Down[ed]" 1
+    fi
+    P_PREFIX
+    
+}
+
+function A_ENABLE {
+
+    # enable package.
+    if [ $# -gt 0 ]; then
+        A_ENABLE_PKG $@; s=$?
+        P_BLANK
+        return $s
+    fi
+
+    # enable package[s] count available.
+    package_count_available=$( find "${XYN_SCRIPT_NFS_ROOT}" -type f -name '*.tar.gz' | grep 'available' | wc -l  )
+
+    # enable package[s].
+    P_MESSAGE "Enable package[s] [${package_count_available}]"
+    [ "${package_count_available}" -eq 0 ] && P_MESSAGE "Disable[ed] package[s] [${package_count_available}]" 3 1
+    for package_name_available in $( find "${XYN_SCRIPT_NFS_ROOT}" -type f -name '*.tar.gz' | grep 'available' | xargs -n 1 basename | sort | sed 's|.tar.gz||g' ); do
+        P_MESSAGE "- ${package_name_available}" 0
+    done
+
+    # enable pacakage[s] confirm.
+    if [ "${XYN_SCRIPT_UNATTENDED}" -eq 0 ]; then
+        if ! P_CONFIRM "Enable package[s]?"; then
+            P_MESSAGE "Enable package[s] aborted" 2
+            P_BLANK
+            return 1
+        fi
+    fi
+
+    # enable package[s] enable package.
+    P_MESSAGE "Enable[ing] package[s]"
+    P_BLANK
+    for package_name in $( find "${XYN_SCRIPT_NFS_ROOT}" -type f -name '*.tar.gz' | grep 'available' | xargs -n 1 basename | sort | sed 's|.tar.gz||g' ); do
+        A_ENABLE_PKG "${package_name}"
+        P_BLANK
+    done
+
+    # enable package[s] count enabled.
+    package_count_enabled=$( find "${XYN_SCRIPT_NFS_ROOT}" -maxdepth 4 -type d | grep 'enabled/' | wc -l  )
+
+    # enable package[s] check.
+    P_MESSAGE "Enable[d] package[s] [${package_count_enabled}]"
+    for package_name_available in $( find "${XYN_SCRIPT_NFS_ROOT}" -type f -name '*.tar.gz' | grep 'available' | xargs -n 1 basename | sort | sed 's|.tar.gz||g' ); do
+        package_name=$( echo "${package_name_available}" | cut -d"." -f 2-3 )
+        find "${XYN_SCRIPT_NFS_ROOT}" -maxdepth 4 -type d | grep 'enabled/' | grep -q "${package_name}" && s=1 || s=2
+        P_MESSAGE "- $package_name" $s
+    done
+
+    # enable package[s].
+    P_BLANK
+
+}
+
+function A_ENABLE_PKG {
+
+    # package type.
+    A_PACKAGE "${1}" "disabled" 1 && package_type="disabled" || package_type="available"
+
+    # package.
+    A_PACKAGE "${1}" "${package_type}" || return $?
+    P_BLANK
+
+    # package name base.
+    package_name_base=$( echo "${XYN_PACKAGE_NAME}" | cut -d '.' -f2-3 )
+
+    # enable package prefix.
+    P_PREFIX "[${XYN_PACKAGE_NAME}] "
+
+    # enable package.
+    P_MESSAGE "Enabl[ing] package [${XYN_PACKAGE_NAME}]"
+
+    # enable package exists remove existing.
+    if [ -e "${XYN_PACKAGE_NFS}/pkgs/enabled/${package_name_base}" ]; then
+        P_MESSAGE "Detect[ed] existing package"
+        A_DELETE "${package_name_base}"
+        A_PACKAGE "${1}" "${package_type}" || return $?
+        P_BLANK
+    fi
+
+    # enable package extract.
+    P_PREFIX "[${XYN_PACKAGE_NAME}] "
+    P_MESSAGE "Enable[ing] package" 0
+    P_COMMAND
+    R "tar -kxzf ${XYN_PACKAGE} --directory '${XYN_PACKAGE_NFS}/pkgs/enabled'"; s=$?
+    O_DATA "${XYN_PACKAGE_NFS}/pkgs/enabled/${package_name_base}"
+    O_BIN "${XYN_PACKAGE_NFS}/pkgs/enabled/${package_name_base}"
+
+    # enable package remove disabled.
+    if echo "${XYN_PACKAGE}" | grep -q 'disabled'; then
+        R "rm '${XYN_PACKAGE}'"
+    fi
+
+    # enable package enabled.
+    if [ $s -eq 0 ]; then
+        P_COMMAND
+        P_MESSAGE "Enable[ed] package" 1
+
+    # enable package error.
+    else
+        P_COMMAND
+        P_MESSAGE "Error [${s}]" 2
+    fi
+
+    # enable package prefix.
+    P_PREFIX
+
+    # enable package.
+    return $s
+
+}
+
+function A_ETC {
+
+    # conf var.
+    package_name="$1"
+    package_command="$2"
+    package="${XYN_SCRIPT_NFS_ROOT}/var/pkgs/enabled/${package_name}"
+
+    # conf.
+    P_MESSAGE "${package_command^}[ing] etc [${package_name}/etc]"
+
+    # conf [etc].
+    if [ -d "${XYN_SCRIPT_NFS_ROOT}/var/pkgs/enabled/${package_name}/etc" ]; then
+
+        # conf [etc].
+        P_COMMAND
+        E_DIR "${XYN_SCRIPT_NFS_ROOT}/var/pkgs/enabled/${package_name}/etc"
+        P_COMMAND
+        cd "${package}"
+
+        # conf [etc] link.
+        if [[ "${package_command}" == "link" ]]; then
+            for config in `find etc -type f`; do
+                R "mkdir -p '/$( dirname ${config} )'"
+                R "ln -sf '$( pwd )/${config}' '/${config}'"
+            done
+        fi
+
+        # conf [etc] rm.
+        if [[ "${package_command}" == "unlink" ]]; then
+            for config in `find etc -type f`; do
+                E_FILE "'/${config}'" && R "rm '/${config}'"
+            done
+        fi
+
+        # conf [etc]
+        P_COMMAND
+        P_MESSAGE "Linked etc [${package_name}/etc]" 1
+        cd "${XYN_SCRIPT_XYN_ROOT}"
+
+    fi
+
+}
+
+function A_EXPORT {
+
+    # export package.
+    if [ $# -gt 0 ]; then
+        A_EXPORT_PKG $@; s=$?
+        P_BLANK
+        return $s
+    fi
+
+    # export package[s] count enabled.
+    package_count_enabled=$( find "${XYN_SCRIPT_NFS_ROOT}" -maxdepth 4 -type d | grep 'enabled/' | wc -l  )
+
+    # export package[s].
+    P_MESSAGE "Export package[s] [${package_count_enabled}]"
+    [ "${package_count_enabled}" -eq 0 ] && P_MESSAGE "Export[ed] package[s] [${package_count_enabled}]" 3 1
+    for package_name_enabled in $( find "${XYN_SCRIPT_NFS_ROOT}" -maxdepth 4 -type d | grep 'enabled/' | xargs -n 1 basename ); do
+        P_MESSAGE "- ${package_name_enabled}" 0
+    done
+
+    # export pacakage[s] confirm.
+    if [ "${XYN_SCRIPT_UNATTENDED}" -eq 0 ]; then
+        if ! P_CONFIRM "Export package[s]?"; then
+            P_MESSAGE "Export package[s] aborted" 2
+            P_BLANK
+            return 1
+        fi
+    fi
+
+    # export package[s] export package.
+    P_MESSAGE "Export[ing] package[s]"
+    P_BLANK
+    for package_name_enabled in $( find "${XYN_SCRIPT_NFS_ROOT}" -maxdepth 4 -type d | grep 'enabled/' | xargs -n 1 basename ); do
+        A_EXPORT_PKG "${package_name_enabled}"
+        P_BLANK
+    done
+
+    # export package[s] count enabled.
+    package_count_enabled=$( find "${XYN_SCRIPT_NFS_ROOT}" -maxdepth 4 -type d | grep 'enabled/' | wc -l  )
+
+    # export package[s] check.
+    P_MESSAGE "Enable[d] package[s] [${package_count_enabled}]"
+    for package_name_available in $( find "${XYN_SCRIPT_NFS_ROOT}" -type f -name '*.tar.gz' | grep 'available' | xargs -n 1 basename | sort | sed 's|.tar.gz||g' ); do
+        package_name=$( echo "${package_name_available}" | cut -d"." -f 2-3 )
+        find "${XYN_SCRIPT_NFS_ROOT}" -maxdepth 4 -type d | grep 'enabled/' | grep -q "${package_name}" && s=1 || s=2
+        P_MESSAGE "- $package_name" $s
+    done
+
+    # export[ed] package[s].
+    P_MESSAGE "Export[ed] package[s]" 1
+    P_BLANK
+
+}
+
+function A_EXPORT_PKG {
+
+    # package.
+    A_PACKAGE "${1}" || return $?
+    P_BLANK
+
+    # export package script maintainer.
+    XYN_SCRIPT_MAINTAINER="${XYN_PACKAGE_MAINTAINER}"
+    [ ! -z "$2"                       ] && XYN_SCRIPT_MAINTAINER="$2"
+    [   -z "${XYN_SCRIPT_MAINTAINER}" ] && XYN_SCRIPT_MAINTAINER="${XYN_SCRIPT_XYN}"
+
+    # export package prefix.
+    P_PREFIX "[${XYN_PACKAGE_NAME}] "
+
+    # export package.
+    P_MESSAGE "Exporting package [${XYN_PACKAGE_NAME}]"
+    package_export="${XYN_PACKAGE_NFS}/pkgs/available/${XYN_SCRIPT_MAINTAINER}.${XYN_PACKAGE_NAME}.tar.gz"
+    P_COMMAND
+
+    # export package available [exists].
+    if E "'${package_export}'"; then
+        P_COMMAND "rm -i '${package_export}'"
+
+        # export package exists abort.
+        if [ "${XYN_SCRIPT_UNATTENDED}" -eq 0 ]; then
+            if ! P_CONFIRM "Package already available, confirm removal"; then
+                P_MESSAGE "Export aborted." 3
+                P_BLANK
+                exit 1
+            fi
+        fi
+
+        # export package remove.
+        R "rm -f '${package_export}'"
+
+    fi
+    P_COMMAND
+
+    # export package archive.
+    P_MESSAGE "Compressing package [${XYN_PACKAGE_NAME}]"
+    P_COMMAND
+    P_COMMAND "mktemp -d"; temp=$( mktemp -d )
+    R "cp -r '${XYN_PACKAGE}' '${temp}/${XYN_PACKAGE_NAME}'"
+    if E_DIR "'${XYN_PACKAGE_NFS}/cfgs/${XYN_PACKAGE_NAME}'"; then
+        E_DIR "'${temp}/${XYN_PACKAGE_NAME}/cfg'" && R "rm -rf '${temp}/${XYN_PACKAGE_NAME}/cfg'"
+        R "cp -r '${XYN_PACKAGE_NFS}/cfgs/${XYN_PACKAGE_NAME}' '${temp}/${XYN_PACKAGE_NAME}/cfg'"
+    fi
+    R "find '${temp}' -exec touch -a -m -t ${XYN_SCRIPT_ATOMIC} {} \;"
+    R "rm '${temp}/${XYN_PACKAGE_NAME}/cfg/.env'"
+    R "chown -R root:root '${temp}'"
+    R "tar -C '${temp}' -czf '${package_export}' '${XYN_PACKAGE_NAME}'"; s=$?
+    R "rm -rf '${temp}'"
+
+    # export exported.
+    if E "${package_export}"; then
+        P_COMMAND
+        P_MESSAGE "Exported package" 1
+
+    # export error.
+    else
+        P_COMMAND
+        P_MESSAGE "Error [$s]" 2
+    fi
+
+    # export package prefix.
+    P_PREFIX    
+
+    # return.
+    return $s
+
+}
+
+function A_FLUSH {
+
+    # flush [package].
+    if [ $# -gt 0 ]; then
+        A_FLUSH_PKG $@
+        P_BLANK
+        return $?
+    fi
+
+    # flush package[s] count.
+    package_count_cfgs=$( ls -I README.md "${XYN_SCRIPT_NFS_ROOT}/var/cfgs" | wc -w )
+
+    # flush package[s] check none.
+    if [ "${package_count_cfgs}" -eq 0 ]; then
+        P_MESSAGE "No package[s] configured; config directory [nfs/var/cfgs] is empty." 3
+        P_MESSAGE "Try up[ing] a package using 'xyn up [PACKAGE]'."
+        P_BLANK
+        return 1
+    fi
+
+    # flush package[s] list enabled.
+    P_MESSAGE "Flush[ing] packages [${package_count_cfgs}]"
+    while read package_name; do
+        P_MESSAGE "- ${package_name}"
+    done <<< $( ls -I README.md "${XYN_SCRIPT_NFS_ROOT}/var/cfgs" )
+    P_BLANK
+
+    # flush package[s].
+    for package_name in `ls -I README.md "${XYN_SCRIPT_NFS_ROOT}/var/cfgs"`; do
+        A_FLUSH_PKG "${package_name}"
+        P_BLANK
+    done
+
+}
+
+function A_FLUSH_PKG {
+
+    # package.
+    A_PACKAGE "${1}" || return $?
+    P_BLANK
+
+    # flush package prefix.
+    P_PREFIX "[${XYN_PACKAGE_NAME}] "
+
+    # flush hook [bin/down].
+    A_HOOK "${XYN_PACKAGE_NAME}" "down"
+    P_BLANK
+
+    # flush cfg [cfgs].
+    P_MESSAGE "Flush[ing] package [${XYN_PACKAGE_NAME}]"
+    P_COMMAND
+    R "rm -rf '${XYN_PACKAGE_NFS}/cfgs/${XYN_PACKAGE_NAME}'"
+
+    # flush.
+    if ! E_DIR "'${XYN_PACKAGE_NFS}/cfgs/${XYN_PACKAGE_NAME}'"; then
+        P_COMMAND; P_MESSAGE "Flush[ed]" 1
+    else
+        P_COMMAND; P_MESSAGE "Flush fail[ed]" 2
+    fi
+
+    # flush prefix.
+    P_PREFIX
+ 
+}
+
+function A_HOOK {
+
+    # hook var.
+    package_name="$1"
+    package_command="$2"
+    package_hook="${XYN_PACKAGE_NFS}/pkgs/enabled/${package_name}/bin/${package_command}"
+
+    # hook var exports.
+    export XYN_PACKAGE_NAME="${package_name}"
+    export XYN_PACKAGE_TYPE="${package_type}"
+    export XYN_PACKAGE_MODULE="${package_module}"
+    export XYN_PACKAGE_CONFIG="${XYN_PACKAGE_NFS}/cfgs/${XYN_PACKAGE_NAME}"
+    export XYN_SCRIPT_COMMON="${XYN_SCRIPT_XYN_ROOT}/bin/common"
+    export XYN_SCRIPT_QUIET="${XYN_SCRIPT_QUIET}"
+    export XYN_SCRIPT_VERBOSE="${XYN_SCRIPT_VERBOSE}"
+    export XYN_USER_PWD="${PWDU}"
+
+    # hook exists.
+    if [ ! -f "${package_hook}" ]; then
+        P_MESSAGE "Missing hook [${package_name}/bin/${package_command}]" 3
+        return 1
+    fi
+
+    # hook.
+    P_MESSAGE "Execute[ing] hook [${XYN_PACKAGE_NAME}/bin/${package_command}]"
+    P_COMMAND ''
+    P_COMMAND "cd ${XYN_PACKAGE_NFS}/pkgs/enabled/${XYN_PACKAGE_NAME}"
+    P_COMMAND "bash -c bin/${package_command}"
+    P_COMMAND
+
+    # hook.
+    cd "${XYN_PACKAGE_NFS}/pkgs/enabled/${XYN_PACKAGE_NAME}"
+    "bin/${package_command}"; s=$?
+    cd "${ROOT}"
+    P_COMMAND
+
+    # hook result.
+    [ "${s}" -eq 0 ] && P_MESSAGE "Execute[ed] hook [${package_name}/bin/${package_command}]" 1
+    [ "${s}" -gt 0 ] && P_MESSAGE "Execute[ed] hook [${package_name}/bin/${package_command}]" 2
+
+    # hook return.
+    return $s
+
+}
+
+function A_IMPORT {
+
+    # import package.
+    if [ $# -gt 0 ]; then
+        A_IMPORT_PKG $@; s=$?
+        P_PREFIX
+        return $s
+    fi; s=0
+
+    # import package[s].
+    P_MESSAGE "Import[ing] ... "
+
+    # import package[s] file[s] skip script root.
+    if echo "${XYN_USER_PWD}" | grep -q "${XYN_SCRIPT_ROOT}"; then 
+        P_MESSAGE "Import detect[ed] self" 3
+        P_MESSAGE "Import fail[ed]" 2; P_BLANK; return 1
+    fi
+
+    # import package[s] file[s].
+    P_COMMAND    
+    P_COMMAND "ls '${XYN_USER_PWD}'"    
+    P_COMMAND "find "${XYN_USER_PWD}" -type d -name 'xyn*' -not -path '*/.*' | grep 'xyn*' | head -1"
+    f_dir=$(   find "${XYN_USER_PWD}" -type d -name 'xyn*' -not -path '*/.*' | grep 'xyn*' | head -1 )
+    P_COMMAND "find "${XYN_USER_PWD}" -type f -name 'xyn*.tar.gz' | head -1"
+    f_tar=$(   find "${XYN_USER_PWD}" -type f -name 'xyn*.tar.gz' | head -1 )
+    P_COMMAND "find "${XYN_USER_PWD}" -type f -name 'xyn*.zip' | head -1"
+    f_zip=$(   find "${XYN_USER_PWD}" -type f -name 'xyn*.zip' | head -1 )
+    P_COMMAND
+
+    # import package[s] file[s] skip nothing.
+    if [ -z "${f_dir}" ] && [ -z "${f_tar}" ] && [ -z "${f_zip}" ]; then
+        P_MESSAGE "Import[ing] [0]" 3; P_BLANK; return 3
+    fi
+
+    # import package[s] file[s] prepare.
+    P_COMMAND "mktemp -d"; temp=$( mktemp -d )
+    R "mkdir -p '${temp}/xyn'"
+    R "mkdir -p '${temp}/imports'"
+    S_DIR_NFS "${temp}/xyn/nfs"
+    P_COMMAND
+
+    # import package[s] file[s] unsort[ed].
+    E_VAR "${f_dir}" && R "cp -r '${f_dir}'/. '${temp}/imports'"
+    E_VAR "${f_tar}" && R "tar -xzf '${f_tar}' --directory '${temp}/imports'"
+    E_VAR "${f_zip}" && R "unzip '${f_zip}' -d '${temp}/imports'"
+    P_COMMAND
+
+    # import package[s] file[s] unsort[ed] cfg[s].
+    i_cfgs=$( find "${temp}/imports" -name 'cfg*' | grep -v 'pkgs/' | head -1 )
+    [ ! -z "${i_cfgs}" ] && R "rm -r '${temp}/xyn/nfs/base/cfgs'"
+    R "mv '${i_cfgs}' '${temp}/xyn/nfs/var/cfgs'"
+
+    # import package[s] file[s] unsort[ed] pkg[s].
+    i_pkgs=$( find "${temp}/imports" -name 'pkg*' | head -1 )
+    [ ! -z "${i_pkgs}" ] && R "rm -r '${temp}/xyn/nfs/base/pkgs'"
+    R "mv '${i_pkgs}' '${temp}/xyn/nfs/base/pkgs'"
+    P_COMMAND
+    
+    # import package[s] permission[s].
+    O_ROOT "${XYN_SCRIPT_XYN_ROOT}"
+    O_BIN  "${XYN_SCRIPT_XYN_ROOT}"
+    O_GIT  "${XYN_SCRIPT_XYN_ROOT}"
+    O_GIT  "${XYN_SCRIPT_NFS_ROOT}"
+    O_DATA "${XYN_SCRIPT_NFS_ROOT}/base/cfgs"
+    P_COMMAND
+
+    # import package[s] 
+    R "cp -RT '${temp}/xyn/' '${XYN_SCRIPT_XYN_ROOT}/'"
+    P_COMMAND
+
+    # import package[s] import[ed].
+    [ $s -eq 0 ] && P_MESSAGE "Import[ed]" 1
+    [ $s -gt 0 ] && P_MESSAGE "Import[ed]" 2
+    
+    # return.
+    return $?
+
+}
+
+function A_INGRADE {
+
+    # ingrade.
+    P_MESSAGE "Ingrade[ing] ... "; e=0
+    P_COMMAND
+    R "mkdir -p '${HOME}/.ssh'" || e=$?
+    if [[ "${XYN_SCRIPT_HOST}" != "git" ]]; then
+        R "ssh-keyscan '${XYN_SCRIPT_HOST}' >> '${HOME}/.ssh/known_hosts' 2> /dev/null" || e=$?
+    fi
+    P_COMMAND
+
+    # ingrade [xyn].
+    A_INGRADE_XYN; e=$( expr $? + $e )
+    P_COMMAND
+    
+    # ingrade [nfs].
+    if [ $e -eq 0 ]; then
+        A_INGRADE_NFS; e=$( expr $? + $e )
+    fi
+
+    # ingrade.
+    [ $e -eq 0 ] && P_MESSAGE "Ingrade[ed]" 1
+    [ $e -gt 0 ] && P_MESSAGE "Ingrade[ed]" 2
+    P_BLANK
+    
+    # return.
+    return $e
+
+}
+
+function A_INGRADE_GIT {
+
+    # ingrade [git].
+    root="${1}"
+    root_base=$( dirname "${root}" )
+    remote_url="${2}"
+    remote="${3}"
+    branch="${4}"
+
+    # ingrade [git] up.
+    if ! E_DIR "'${root}'" && [ $# -ge 4 ]; then
+        R "mkdir -p '${root_base}'"                             || return $?
+        R "git clone '${remote_url}' '${root}'"                 || return $?
+        R "cd '${root}' && git checkout '${branch}'"            || return $?
+        R "git config --global --add safe.directory '$( pwd )'" || return $?
+
+    # ingrade [git] upgrade.
+    elif E_DIR "'${root}'"; then
+        P_COMMAND "cd '${root}'"; cd "${root}"  || return $?
+        E_DIR '.git'                            || return $?
+        R 'git pull'                            || return $?
+
+    fi
+
+    # ingrade [git] sample[s].
+    E_FILE "${root}/.defaults" || R "cp '${root}/.defaults.sample' '${root}/.defaults'"
+    E_FILE "${root}/.cfg"      || R "cp '${root}/.cfg.sample' '${root}/.cfg'"
+
+    # return.
+    return 0
+
+}
+
+function A_INGRADE_XYN {
+    P_MESSAGE "Ingrade[ing] [xyn] ... "
+    P_COMMAND
+    A_INGRADE_GIT "${XYN_SCRIPT_XYN_ROOT}" "${XYN_SCRIPT_XYN_REMOTE_URL}"  "${XYN_SCRIPT_XYN_REMOTE}" "${XYN_SCRIPT_XYN_BRANCH}" || return $?
+    P_COMMAND
+    S_DIR_XYN "${XYN_SCRIPT_XYN_ROOT}" || return $?
+    P_COMMAND
+    S_DIR_NFS "${XYN_SCRIPT_NFS_ROOT}/base" || return $?
+    return $s
+}
+
+function A_INGRADE_NFS {
+    for repo in `find "${XYN_SCRIPT_NFS_ROOT}" -maxdepth 1 -type d`; do
+        repo_name=$( basename "${repo}" )
+        if [[ ! " ${XYN_SCRIPT_NFS_IGNORE[*]} " =~ " ${repo_name} " ]]; then
+            if [[ "${repo_name}" != "base" ]]; then
+                A_INGRADE_GIT "${repo}"; s=$?
+                S_DIR_NFS "${repo}"
+                P_COMMAND
+            fi
+        fi
+    done
+    return $s
+}
+
+function A_INIT {
+
+    # init.
+    e=0
+
+    # init commands.
+    init_commands=(
+        dialog
+        git
+        tar
+        which
+        wget
+    )
+    for c in "${init_commands[@]}"; do
+        c_path=$( which ${c} 2> /dev/null )
+        if command -v "${c}" &> /dev/null; then
+            P_MESSAGE "$( printf '%-16s %-3s %s\n' "${c_path}" '::' "${c}" )" 1
+        else
+            P_MESSAGE "$( printf '%-16s %-3s %s\n' "/bin/${c}" '::' "${c}" )" 2
+            e=$( expr $e + 1 )
+        fi        
+    done
+    P_BLANK
+    [ $e -ne 0 ] && return "${e}"
+
+    # init configure.
+    P_MESSAGE "Botstrap[ing] ... "
+    P_COMMAND
+    P_COMMAND "${XYN_SCRIPT_XYN} configure"; s=$?
+    P_COMMAND; sleep 2
+    A_CONFIGURE
+    return $?
+    
+}
+
+function A_LIST {
+
+    # list cd.
+    root="$( dirname  "${XYN_SCRIPT_NFS_ROOT}" )"; cd "${root}"
+    base="$( basename "${XYN_SCRIPT_NFS_ROOT}" )";
+
+    # list / tree packages root.
+    [ -e "${base}/$1" ] && root="${base}/$1" && shift
+
+    # list / tree packages root list.
+    P_BLANK; tree -L 4 -I 'cfgs' -P '*.tar.gz' "${base}" $@; P_BLANK 
+ 
+} 
+
+function A_PACKAGE {
+
+    # package name.
+    package_name="$1"
+    package_group="$2"
+    [ -z "${package_group}" ] && package_group="enabled"
+
+    # package find.
+    [ $# -le 2 ] && P_MESSAGE "Search[ing] for package [${package_name}]"
+
+    # package var archive.
+    XYN_PACKAGE_ARCHIVE=$( find "${XYN_SCRIPT_NFS_ROOT}" -type f -name '*.tar.gz' | xargs -I {} basename {} \; | sed "s/.tar.gz//g" | grep "${package_name}" | head -1 )
+
+    # package var archive [exists].
+    [ -z "${XYN_PACKAGE_ARCHIVE}" ] && P_MESSAGE "Package not found [${package_name}]" 2 1
+    XYN_PACKAGE_ARCHIVE="${XYN_PACKAGE_ARCHIVE}.tar.gz"
+
+    # package var.
+    XYN_PACKAGE=$( find "${XYN_SCRIPT_NFS_ROOT}" -type f -name '*.tar.gz' | grep "${XYN_PACKAGE_ARCHIVE}" | head -1 )
+    XYN_PACKAGE_NAME=$( basename "${XYN_PACKAGE}" )
+    XYN_PACKAGE_NFS=$( dirname $( dirname $( dirname "${XYN_PACKAGE}" ) ) )
+
+    # package var base.
+    XYN_PACKAGE_NAME_BASE=$( echo "${XYN_PACKAGE_NAME}" | sed 's,.tar.gz,,g' )
+    XYN_PACKAGE_NAME_BASE_DOT=$( echo -n ${XYN_PACKAGE_NAME_BASE//[^.]} | wc -c )
+    if [ "${XYN_PACKAGE_NAME_BASE_DOT}" -gt 1 ]; then
+        XYN_PACKAGE_NAME_BASE="$( echo $XYN_PACKAGE_NAME_BASE | cut -d'.' -f 2-3 )"
+    fi
+
+    # package find [package_group].
+    [[ "${package_group}" == "enabled" ]] && XYN_PACKAGE="${XYN_PACKAGE_NFS}/pkgs/${package_group}/${XYN_PACKAGE_NAME_BASE}"
+    [[ "${package_group}" != "enabled" ]] && XYN_PACKAGE="${XYN_PACKAGE_NFS}/pkgs/${package_group}/${XYN_PACKAGE_NAME}"
+    if [ ! -e "${XYN_PACKAGE}" ]; then
+        [ $# -le 2 ] && P_MESSAGE "Package not found [${package_name}]" 2
+        return 3
+    fi
+
+    # package var.
+    XYN_PACKAGE_NAME=$( basename "${XYN_PACKAGE}" )
+    XYN_PACKAGE_MAINTAINER=$( find "${XYN_SCRIPT_NFS_ROOT}" -name "*.tar.gz" -exec basename {} \; | grep "${XYN_PACKAGE_NAME}" | sort -n | head -1 | cut -d"." -f1 )
+    XYN_PACKAGE_TYPE=$( echo $XYN_PACKAGE_NAME_BASE | cut -d'.' -f1 )
+    XYN_PACKAGE_MODULE=$( echo $package_name | cut -d'.' -f2 )
+    XYN_PACKAGE_NFS=$( dirname $( dirname $( dirname "${XYN_PACKAGE}" ) ) )
+
+    # package var export.
+    export XYN_PACKAGE="${XYN_PACKAGE}"
+    export XYN_PACKAGE_NAME="${XYN_PACKAGE_NAME}"
+    export XYN_PACKAGE_TYPE="${XYN_PACKAGE_TYPE}"
+    export XYN_PACKAGE_MODULE="${XYN_PACKAGE_MODULE}"
+    export XYN_PACKAGE_NFS="${XYN_PACKAGE_NFS}"
+
+    # package found.
+    if [ $# -le 2 ]; then
+        P_MESSAGE "Package found [${XYN_PACKAGE_NAME}]" 1
+    fi
+
+}
+
+function A_PROVISION {
+
+    # provision.
+    P_MESSAGE "Provision[ing]"
+    P_BLANK
+
+    # provision [force] [remove].
+    if echo "$@" | grep -q "\-f"; then
+        P_MESSAGE "Remove[ing]"
+        P_COMMAND
+        R "rm -rf '${XYN_SCRIPT_XYN_ROOT}'"
+        P_COMMAND
+        P_MESSAGE "Remove[ed]" 1
+        P_BLANK
+    fi
+
+    # provision [rsync].
+    if [ ! -d '/opt/xyn' ]; then
+        P_MESSAGE "Sync[ing]"
+        P_COMMAND
+        R "rsync -a '${XYN_INIT_SCRIPT_ROOT}/' '${XYN_SCRIPT_XYN_ROOT}' --exclude '.vagrant'" && e=1 || e=2
+        P_COMMAND
+        P_MESSAGE "Sync[ed]" $e
+        P_BLANK
+    fi
+
+    # provision [sys.base].
+    A_ENABLE 'sys.base'
+    A_UP     'sys.base'
+
+    # provision[ed].
+    P_MESSAGE "Provision[ed]" 1
+    P_BLANK
+
+}
+
+function A_UP {
+
+    # up package.
+    if [ $# -gt 0 ]; then
+        A_UP_PKG $@; s=$?
+        P_BLANK
+        P_PREFIX
+        return $s
+    fi
+
+    # up package.
+    if [ $# -gt 0 ]; then
+        A_DOWN_PKG $@
+        P_BLANK
+        return $?
+    fi
+
+    # up package[s] count enabled.
+    package_count_enabled=$( find "${XYN_SCRIPT_NFS_ROOT}" -maxdepth 4 -type d | grep 'enabled/' | wc -l  )
+
+    # up package[s] list enaabled.
+    P_MESSAGE "Up[ing] package[s] [${package_count_enabled}]"
+    [ "${package_count_enabled}" -eq 0 ] && P_MESSAGE "Up[ed]  package[s] [${package_count_enabled}]" 3 1
+    for package_name_enabled in $( find "${XYN_SCRIPT_NFS_ROOT}" -maxdepth 4 -type d | grep 'enabled/' | xargs -n 1 basename ); do
+        P_MESSAGE "- ${package_name_enabled}" 0
+    done
+    if ! P_CONFIRM "Up package[s]?"; then
+        P_MESSAGE "Up package[s] aborted" 2
+        P_BLANK
+        F_EXIT 1
+    fi
+    P_MESSAGE "Up[ing] package[s]"
+    P_BLANK
+
+    # up package[s].
+    for package_name in $( find "${XYN_SCRIPT_NFS_ROOT}" -maxdepth 4 -type d | grep 'enabled/' | xargs -n 1 basename ); do
+        A_UP_PKG "${package_name}"
+        P_BLANK        
+    done
+
+    #
+    #   TODO: CHECK A_PACKAGE_HEALTH UP
+    #
+
+}
+
+function A_UP_PKG {
+
+    # package.
+    A_PACKAGE "${1}" || return $?
+    P_BLANK
+
+    # package prefix.
+    P_PREFIX "[${XYN_PACKAGE_NAME}] "
+
+    # up package start.
+    P_MESSAGE "Up[ing] package [${XYN_PACKAGE_NAME}]"
+
+    # up package conf [cfg]
+    A_CFG "${XYN_PACKAGE_NAME}"
+
+    # up package conf [etc]
+    A_ETC "${XYN_PACKAGE_NAME}" "link"
+
+    # up package hook [bin/up].
+    A_HOOK "${XYN_PACKAGE_NAME}" "up"; s=$?
+
+    # up package.
+    [ $s -eq 0 ] && P_MESSAGE "Up[ed]" 1 || P_MESSAGE "Up fail[ed] [${s}]" 2
+
+    # pacakge prefix.
+    P_PREFIX
+
+    # return.
+    return $s
+    
+}
+
+function A_UPGRADE {
+
+    # upgrade package.
+    if [ $# -gt 0 ]; then
+        A_UPGRADE_PKG $@
+        P_BLANK
+        return $?
+    fi
+
+    # upgrade package[s] count enabled.
+    package_count_enabled=$( find "${XYN_SCRIPT_NFS_ROOT}" -maxdepth 4 -type d | grep 'enabled/' | wc -l  )
+
+    # upgrade package[s] list enabled.
+    P_MESSAGE "Upgrade[ing] package[s] [${package_count_enabled}]"
+    [ "${package_count_enabled}" -eq 0 ] && P_MESSAGE "Upgrade[ed]  package[s] [${package_count_enabled}]" 3 1
+    for package_name_enabled in $( find "${XYN_SCRIPT_NFS_ROOT}" -maxdepth 4 -type d | grep 'enabled/' | xargs -n 1 basename ); do
+        P_MESSAGE "- ${package_name_enabled}" 0
+    done
+    if ! P_CONFIRM "Upgrade package[s]?"; then
+        P_MESSAGE "Upgrade package[s] aborted" 2
+        P_BLANK
+        F_EXIT 1
+    fi
+    P_MESSAGE "Upgrade[ing] package[s]"
+    P_BLANK
+
+    # upgrade package[s].
+    for package_name in $( find "${XYN_SCRIPT_NFS_ROOT}" -maxdepth 4 -type d | grep 'enabled/' | grep 'sys' | xargs -n 1 basename 2> /dev/null ); do
+        A_UPGRADE_PKG "${package_name}"
+        P_BLANK        
+    done
+    for package_name in $( find "${XYN_SCRIPT_NFS_ROOT}" -maxdepth 4 -type d | grep 'enabled/' | grep -v 'sys' | xargs -n 1 basename | sort 2> /dev/null ); do
+        A_UPGRADE_PKG "${package_name}"
+        P_BLANK        
+    done
+
+    # upgrade package[s] upgrade[d].
+    P_MESSAGE "Upgrade[ed] package[s]"
+
+    #
+    #   TODO: CHECK A_PACKAGE_HEALTH DOWN
+    #
+
+    # return.
+    return 0
+
+}
+
+function A_UPGRADE_PKG {
+
+    # package.
+    A_PACKAGE "${1}" || return $?
+    P_BLANK
+
+    # upgrade package.
+    P_MESSAGE "Upgrade package [${XYN_PACKAGE_NAME}]"
+    P_BLANK
+    A_ENABLE_PKG "${package_name}"; e=$?
+    if [ $e -eq 0 ]; then
+        P_BLANK
+        A_UP_PKG "${package_name}"; e=$?
+    fi
+    P_BLANK
+
+    # upgrade[ed].                    
+    [ $e -eq 0 ] && P_MESSAGE "Upgrade[ed]" 1
+    [ $e -gt 0 ] && P_MESSAGE "Upgrade[ed]" 2
+    P_PREFIX
+    
+}
+
+
+#
+#   main.
+#
+S_ROOT
+
+
+#
+#   main arg[s].
+#
+$( echo $@ | grep -q '\-q' ) && XYN_SCRIPT_QUIET=1
+$( echo $@ | grep -q '\-u' ) && XYN_SCRIPT_UNATTENDED=1
+$( echo $@ | grep -q '\-v' ) && XYN_SCRIPT_VERBOSE=1
+
+
+#
+#   main init.
+#
+[[ "${0}" == 'bash' ]] && P_ASCII && A_INIT && exit 0
+[[ "${0}" == 'bash' ]] && exit 1
+
+
+#
+#   main usage.
+#
+[ $# -eq 0 ] && P_USAGE
+
+
+#
+#   main action[s].
+#
+for arg in "$@"; do
+
+    # action[s] skip flag[s].
+    echo "${arg}" | grep -q '\-' && shift && continue
+
+    # action[s] action.
+    action="${arg}"; shift
+    case "${action}" in
+        clone|copy)         A_CLONE $@
+                            ;;
+        configure)          A_CONFIGURE $@
+                            ;;
+        delete|rm)          P_BLANK
+                            A_DELETE $@
+                            ;;
+        disable)            P_BLANK
+                            A_DISABLE $@
+                            ;;
+        down)               P_BLANK
+                            A_DOWN $@
+                            ;;
+        enable)             P_BLANK
+                            A_ENABLE $@
+                            ;;
+        export|save)        P_BLANK
+                            A_EXPORT $@
+                            ;;
+        flush)              P_BLANK
+                            A_FLUSH $@
+                            ;;
+        help)               P_BLANK
+                            P_HELP
+                            ;;
+        ingrade|sync|pull)  P_BLANK
+                            A_INGRADE $@
+                            ;;
+        init)               P_ASCII
+                            A_INIT $@
+                            ;;
+        import)             P_BLANK
+                            A_IMPORT
+                            ;;
+        up)                 P_BLANK
+                            A_UP $@
+                            ;;
+        list|ls)            A_LIST $@
+                            ;;
+        provision)          P_ASCII
+                            A_PROVISION $@
+                            ;;
+        upgrade)            P_BLANK
+                            A_UPGRADE $@
+                            ;;
+        *)                  P_USAGE $@
+                            ;;
+    esac
+
+    # break.
+    break
+
+done
